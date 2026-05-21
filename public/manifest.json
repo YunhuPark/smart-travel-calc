@@ -1,0 +1,17 @@
+{
+  "name": "Smart Travel Calc",
+  "short_name": "SmartTravel",
+  "description": "AI 기반 스마트 여행 정산 및 가계부",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f2f4f6",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
