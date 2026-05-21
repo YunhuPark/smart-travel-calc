@@ -295,7 +295,7 @@ export default function Home() {
                         ))}
                       </Pie>
                       <Tooltip 
-                        formatter={(value: number) => `${Math.round(value).toLocaleString()}원`}
+                        formatter={(value: any) => `${Math.round(Number(value || 0)).toLocaleString()}원`}
                       />
                       <Legend />
                     </PieChart>
