@@ -3,6 +3,17 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
+export async function OPTIONS(req: Request) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 export async function POST(req: Request) {
   try {
     if (!process.env.GEMINI_API_KEY) {
@@ -77,7 +88,11 @@ export async function POST(req: Request) {
       throw new Error("AI 응답을 처리할 수 없습니다.");
     }
 
-    return NextResponse.json({ data: parsedData });
+    return NextResponse.json({ data: parsedData }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
   } catch (error: any) {
     console.error('Error analyzing:', error);
     
@@ -89,7 +104,12 @@ export async function POST(req: Request) {
 
     return NextResponse.json(
       { error: errorMsg, details: error.message },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+        }
+      }
     );
   }
 }
