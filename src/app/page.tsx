@@ -34,7 +34,8 @@ export default function Home() {
     setError(null);
     
     try {
-      const res = await fetch("/api/analyze", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+      const res = await fetch(`${apiUrl}/api/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: analyzeText, image: analyzeImage }),
