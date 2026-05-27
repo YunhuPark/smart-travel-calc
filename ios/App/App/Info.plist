@@ -7,7 +7,11 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>SmartTravel</string>
+        <string>여행더치</string>
+	<key>NSCameraUsageDescription</key>
+	<string>영수증을 촬영하여 지출 내역을 분석하기 위해 카메라 접근 권한이 필요합니다.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>저장된 영수증 사진을 불러오기 위해 갤러리 접근 권한이 필요합니다.</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
