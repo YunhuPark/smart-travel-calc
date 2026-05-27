@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.smarttravel.app',
-  appName: 'SmartTravel',
+  appName: '여행더치',
   webDir: 'out'
 };
 

@@ -24,6 +24,7 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -47,7 +48,17 @@ export default function Home() {
         throw new Error(result.error || "분석 중 오류가 발생했습니다.");
       }
       
-      setExpenses((prev) => [...result.data, ...prev]);
+      const responseData = result.data;
+      if (Array.isArray(responseData)) {
+        setExpenses((prev) => [...responseData, ...prev]);
+        setSummary(null);
+      } else if (responseData && Array.isArray(responseData.items)) {
+        setExpenses((prev) => [...responseData.items, ...prev]);
+        if (responseData.summary) {
+          setSummary(responseData.summary);
+        }
+      }
+      
       setText(""); 
     } catch (err: any) {
       setError(err.message);
@@ -182,6 +193,15 @@ export default function Home() {
 
             {/* Results Area */}
             <div>
+              {summary && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 p-4 rounded-2xl mb-6 text-sm leading-relaxed border border-blue-100 dark:border-blue-800 animate-in fade-in slide-in-from-bottom-2">
+                  <div className="flex items-center gap-2 mb-1.5 font-bold">
+                    <span>💡 AI 영수증 분석 요약</span>
+                  </div>
+                  {summary}
+                </div>
+              )}
+
               <div className="flex items-center justify-between mb-4 px-1">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">정산 내역</h2>
                 {expenses.length > 0 && (
@@ -209,7 +229,7 @@ export default function Home() {
                             <MapPin className="w-5 h-5" />
                           </div>
                           <div className="overflow-hidden">
-                            <p className="font-bold text-gray-900 dark:text-gray-100 truncate w-32">{exp.place || '알 수 없음'}</p>
+                            <p className="font-bold text-gray-900 dark:text-gray-100">{exp.place || '알 수 없음'}</p>
                             <p className="text-xs text-gray-500 mt-0.5">{exp.category || '기타'}</p>
                           </div>
                         </div>
