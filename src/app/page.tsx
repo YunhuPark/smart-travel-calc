@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
-import { ArrowRight, Plane, Receipt, MapPin, Wifi, WifiOff, Loader2, PieChart as PieChartIcon, Home as HomeIcon, Settings, Users, Trash2, Database, Moon } from "lucide-react";
+import { useState, useRef, useMemo, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { ArrowRight, Plane, Receipt, MapPin, Wifi, WifiOff, Loader2, PieChart as PieChartIcon, Home as HomeIcon, Settings, Users, Trash2, Database, Moon, Sun } from "lucide-react";
 import { useExchangeRates } from "@/hooks/useExchangeRates";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
@@ -14,17 +15,44 @@ interface Expense {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6B6B'];
 
-export default function Home() {
+function HomeContent() {
   const { loading: ratesLoading, error: ratesError, isOffline, convertToKRW } = useExchangeRates();
   
   const [activeTab, setActiveTab] = useState<'home' | 'stats' | 'settings'>('home');
   const [peopleCount, setPeopleCount] = useState<number>(1);
 
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('travel_dark_mode');
+    if (stored === 'true') setDarkMode(true);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+    localStorage.setItem('travel_dark_mode', String(darkMode));
+  }, [darkMode]);
+
   const [text, setText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const searchParams = useSearchParams();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchParams.get('demo') === 'true') {
+      setExpenses([
+        { place: "도톤보리 이치란 라멘", amount: 980, currency: "JPY", category: "식비" },
+        { place: "오사카 숙소 (2박)", amount: 85000, currency: "KRW", category: "숙박" },
+        { place: "간사이 공항 리무진버스", amount: 1800, currency: "JPY", category: "교통" },
+        { place: "유니버설 스튜디오 입장권", amount: 9800, currency: "JPY", category: "관광" },
+        { place: "편의점 간식", amount: 1200, currency: "JPY", category: "식비" },
+        { place: "타코야키 노점", amount: 600, currency: "JPY", category: "식비" },
+      ]);
+      setPeopleCount(3);
+    }
+  }, [searchParams]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -115,14 +143,13 @@ export default function Home() {
 
   const handleClearCache = () => {
     if (confirm("저장된 환율 데이터를 삭제하시겠습니까? (삭제 후 앱을 새로고침하면 다시 불러옵니다)")) {
-      localStorage.removeItem('exchange_rates');
-      localStorage.removeItem('exchange_rates_timestamp');
+      localStorage.removeItem('smart_travel_exchange_rates_v2');
       alert("환율 캐시가 삭제되었습니다.");
     }
   };
 
   return (
-    <main className="flex-1 flex flex-col bg-[#f2f4f6] min-h-screen">
+    <main className="flex-1 flex flex-col bg-[#f2f4f6] dark:bg-zinc-950 min-h-screen">
       <header className="py-6 px-6 flex items-center justify-between bg-white dark:bg-zinc-900 shadow-sm z-10 sticky top-0">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white flex items-center gap-2">
@@ -194,8 +221,8 @@ export default function Home() {
             {/* Results Area */}
             <div>
               {summary && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 p-4 rounded-2xl mb-6 text-sm leading-relaxed border border-blue-100 dark:border-blue-800 animate-in fade-in slide-in-from-bottom-2">
-                  <div className="flex items-center gap-2 mb-1.5 font-bold">
+                <div className="bg-blue-50 dark:bg-zinc-800 text-blue-900 dark:text-gray-100 p-4 rounded-2xl mb-6 text-sm leading-relaxed border border-blue-200 dark:border-blue-500 animate-in fade-in slide-in-from-bottom-2">
+                  <div className="flex items-center gap-2 mb-1.5 font-bold text-blue-700 dark:text-blue-400">
                     <span>💡 AI 영수증 분석 요약</span>
                   </div>
                   {summary}
@@ -341,51 +368,49 @@ export default function Home() {
 
               <div className="flex flex-col gap-4">
                 {/* 데이터 관리 */}
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500">
-                      <Trash2 className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900 dark:text-gray-100">정산 내역 초기화</p>
-                      <p className="text-xs text-gray-500">현재까지 기록된 모든 지출 삭제</p>
-                    </div>
+                <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl">
+                  <div className="w-10 h-10 shrink-0 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500">
+                    <Trash2 className="w-5 h-5" />
                   </div>
-                  <button onClick={handleClearExpenses} className="px-4 py-2 bg-white dark:bg-zinc-700 text-red-500 text-sm font-bold rounded-xl shadow-sm border border-gray-100 dark:border-zinc-600 hover:bg-gray-50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">정산 내역 초기화</p>
+                    <p className="text-xs text-gray-500 mt-0.5">모든 지출 내역 삭제</p>
+                  </div>
+                  <button onClick={handleClearExpenses} className="shrink-0 px-3 py-1.5 bg-white dark:bg-zinc-700 text-red-500 text-sm font-bold rounded-xl shadow-sm border border-gray-100 dark:border-zinc-600 hover:bg-gray-50 transition-colors whitespace-nowrap">
                     지우기
                   </button>
                 </div>
 
                 {/* 캐시 관리 */}
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500">
-                      <Database className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900 dark:text-gray-100">환율 데이터 삭제</p>
-                      <p className="text-xs text-gray-500">오프라인 대비용 캐시 파일 삭제</p>
-                    </div>
+                <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl">
+                  <div className="w-10 h-10 shrink-0 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500">
+                    <Database className="w-5 h-5" />
                   </div>
-                  <button onClick={handleClearCache} className="px-4 py-2 bg-white dark:bg-zinc-700 text-gray-700 dark:text-gray-200 text-sm font-bold rounded-xl shadow-sm border border-gray-100 dark:border-zinc-600 hover:bg-gray-50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">환율 데이터 삭제</p>
+                    <p className="text-xs text-gray-500 mt-0.5">캐시된 환율 파일 삭제</p>
+                  </div>
+                  <button onClick={handleClearCache} className="shrink-0 px-3 py-1.5 bg-white dark:bg-zinc-700 text-gray-700 dark:text-gray-200 text-sm font-bold rounded-xl shadow-sm border border-gray-100 dark:border-zinc-600 hover:bg-gray-50 transition-colors whitespace-nowrap">
                     삭제
                   </button>
                 </div>
 
-                {/* 테마 정보 */}
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-500">
-                      <Moon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900 dark:text-gray-100">다크 모드</p>
-                      <p className="text-xs text-gray-500">시스템 설정에 따라 동기화됨</p>
-                    </div>
+                {/* 테마 토글 */}
+                <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-zinc-800 rounded-2xl">
+                  <div className="w-10 h-10 shrink-0 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-500">
+                    {darkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                   </div>
-                  <div className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs font-bold rounded-full">
-                    자동 연동 중
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">다크 모드</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{darkMode ? '다크 모드 사용 중' : '라이트 모드 사용 중'}</p>
                   </div>
+                  <button
+                    onClick={() => setDarkMode(!darkMode)}
+                    className={`shrink-0 relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${darkMode ? 'bg-blue-600' : 'bg-gray-300'}`}
+                    aria-label="다크 모드 토글"
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${darkMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
                 </div>
               </div>
             </div>
@@ -426,5 +451,13 @@ export default function Home() {
          </div>
       </nav>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense>
+      <HomeContent />
+    </Suspense>
   );
 }
