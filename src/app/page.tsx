@@ -22,10 +22,29 @@ function HomeContent() {
   const [peopleCount, setPeopleCount] = useState<number>(1);
 
   const [darkMode, setDarkMode] = useState(false);
+  const [pendingRetry, setPendingRetry] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('travel_dark_mode');
     if (stored === 'true') setDarkMode(true);
+
+    // 이전 분석이 중단됐는지 확인
+    const pending = localStorage.getItem('smart_travel_pending_analysis');
+    if (pending) {
+      try {
+        const { text: savedText, hasImage, startedAt } = JSON.parse(pending);
+        const age = Date.now() - startedAt;
+        if (age < 5 * 60 * 1000) { // 5분 이내
+          if (savedText) {
+            setText(savedText);
+            setPendingRetry('text');
+          } else if (hasImage) {
+            setPendingRetry('image');
+          }
+        }
+      } catch {}
+      localStorage.removeItem('smart_travel_pending_analysis');
+    }
   }, []);
 
   useEffect(() => {
@@ -56,12 +75,21 @@ function HomeContent() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const PENDING_KEY = 'smart_travel_pending_analysis';
+
   const handleAnalyze = async (analyzeText: string, analyzeImage?: string) => {
     if (!analyzeText.trim() && !analyzeImage) return;
-    
+
     setIsAnalyzing(true);
     setError(null);
-    
+
+    // 앱 종료 대비: 분석 시작 시 localStorage에 임시 저장
+    localStorage.setItem(PENDING_KEY, JSON.stringify({
+      text: analyzeText || null,
+      hasImage: !!analyzeImage,
+      startedAt: Date.now(),
+    }));
+
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
       const res = await fetch(`${apiUrl}/api/analyze`, {
@@ -69,13 +97,13 @@ function HomeContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: analyzeText, image: analyzeImage }),
       });
-      
+
       const result = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(result.error || "분석 중 오류가 발생했습니다.");
       }
-      
+
       const responseData = result.data;
       if (Array.isArray(responseData)) {
         setExpenses((prev) => [...responseData, ...prev]);
@@ -86,12 +114,13 @@ function HomeContent() {
           setSummary(responseData.summary);
         }
       }
-      
-      setText(""); 
+
+      setText("");
     } catch (err: any) {
       setError(err.message);
     } finally {
       setIsAnalyzing(false);
+      localStorage.removeItem(PENDING_KEY);
     }
   };
 
@@ -174,6 +203,24 @@ function HomeContent() {
       <section className="flex-1 overflow-y-auto pb-24 px-6 pt-6">
         {activeTab === 'home' && (
           <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2">
+            {/* 분석 중단 복원 알림 */}
+            {pendingRetry && (
+              <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-2xl px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+                <span className="text-base leading-none mt-0.5">⚠️</span>
+                <div className="flex-1">
+                  {pendingRetry === 'text'
+                    ? '이전 분석이 중단되었습니다. 텍스트를 복원했습니다.'
+                    : '이전 영수증 이미지 분석이 중단되었습니다. 영수증을 다시 업로드해주세요.'}
+                </div>
+                <button
+                  onClick={() => setPendingRetry(null)}
+                  className="text-amber-600 dark:text-amber-400 font-bold leading-none hover:opacity-70"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             {/* Input Area */}
             <div className="bg-white dark:bg-zinc-900 rounded-3xl p-5 shadow-sm relative group focus-within:ring-2 focus-within:ring-blue-500 transition-all">
               <textarea
