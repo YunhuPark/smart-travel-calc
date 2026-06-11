@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 
-const API_URL = "https://open.er-api.com/v6/latest/KRW";
-const CACHE_KEY = "smart_travel_exchange_rates";
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_KEY = "smart_travel_exchange_rates_v2";
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 export interface ExchangeRates {
   [currencyCode: string]: number;
@@ -27,50 +26,42 @@ export function useExchangeRates() {
       setError(null);
       setIsOffline(false);
 
-      // Check cache first
       const cachedString = localStorage.getItem(CACHE_KEY);
       let hasValidCache = false;
 
       if (cachedString) {
         try {
           const cachedData: CachedData = JSON.parse(cachedString);
-          const now = Date.now();
-          // If cache is fresh, use it and don't fetch
-          if (now - cachedData.timestamp < CACHE_TTL) {
+          if (Date.now() - cachedData.timestamp < CACHE_TTL) {
             setRates(cachedData.rates);
             setLoading(false);
             return;
           } else {
-             // Cache expired, but keep it in state just in case fetch fails
-             setRates(cachedData.rates);
-             hasValidCache = true;
+            setRates(cachedData.rates); // stale-while-revalidate
+            hasValidCache = true;
           }
         } catch (e) {
-          console.error("Failed to parse cached rates", e);
+          console.error("캐시 파싱 실패", e);
         }
       }
 
-      // Fetch new rates
       try {
-        const response = await fetch(API_URL);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+        const response = await fetch(`${apiUrl}/api/exchange-rate`, { method: 'POST' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
         const data = await response.json();
-        
-        if (data && data.rates) {
+        if (data.rates) {
           setRates(data.rates);
-          // Save to cache
-          const cacheData: CachedData = {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({
             rates: data.rates,
             timestamp: Date.now(),
-          };
-          localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+          }));
         } else {
-          throw new Error("Invalid data format from API");
+          throw new Error("응답 형식 오류");
         }
       } catch (err) {
-        console.error("Failed to fetch exchange rates:", err);
+        console.error("환율 fetch 실패:", err);
         setIsOffline(true);
         if (!hasValidCache) {
           setError("환율 정보를 불러올 수 없습니다. 인터넷 연결을 확인해주세요.");
@@ -83,10 +74,11 @@ export function useExchangeRates() {
     fetchRates();
   }, []);
 
-  // Helper function to convert any currency to KRW
+  // rates 형식: { JPY: 9.81, USD: 1370, ... } — 1단위 외화 = KRW
   const convertToKRW = (amount: number, currencyCode: string): number | null => {
-    if (!rates || !rates[currencyCode]) return null;
-    return amount / rates[currencyCode];
+    if (currencyCode === 'KRW') return Math.round(amount);
+    if (!rates || rates[currencyCode] === undefined) return null;
+    return Math.round(amount * rates[currencyCode]);
   };
 
   return { rates, loading, error, isOffline, convertToKRW };
