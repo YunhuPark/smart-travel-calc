@@ -23,4 +23,3 @@ for (const endpoint of ['analyze', 'exchange-rate']) {
     assert.equal(calls, 0);
   });
 }
-
