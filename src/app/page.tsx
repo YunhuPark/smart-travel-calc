@@ -1,4 +1,6 @@
 "use client";
+import { aiHeaders } from '../lib/ai-session';
+import { AiAccessPanel } from '../components/AiAccessPanel';
 
 import { useState, useRef, useMemo, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -94,7 +96,7 @@ function HomeContent() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
       const res = await fetch(`${apiUrl}/api/analyze`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...aiHeaders() },
         body: JSON.stringify({ text: analyzeText, image: analyzeImage }),
       });
 
@@ -201,6 +203,7 @@ function HomeContent() {
       </header>
 
       <section className="flex-1 overflow-y-auto pb-24 px-6 pt-6">
+        <AiAccessPanel />
         {activeTab === 'home' && (
           <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2">
             {/* 분석 중단 복원 알림 */}
