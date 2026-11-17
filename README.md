@@ -41,3 +41,8 @@ AI 기반의 모바일 퍼스트 여행 정산 및 가계부 웹 애플리케이
    npm run dev
    ```
 5. 브라우저에서 `http://localhost:3000` (포트에 따라 3001)으로 접속하여 확인합니다.
+
+
+## Paid AI access and budgets
+
+See [server-only operator access and shared Redis budget configuration](docs/PAID_AI.md) before enabling Gemini. The UI access code is kept only in page memory.
