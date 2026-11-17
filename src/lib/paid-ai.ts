@@ -51,6 +51,7 @@ export async function readPaidJson(request: Request, maxBytes: number): Promise<
 }
 
 export async function acquirePaidAi(request: Request, attempts = 1): Promise<() => Promise<void>> {
+  if (process.env.PAID_AI_ENABLED === 'false') throw new PaidAiError(503, 'Paid AI is disabled');
   authenticate(request);
   if (!Number.isInteger(attempts) || attempts < 1 || attempts > 3) {
     throw new PaidAiError(503, 'Invalid provider attempt budget');

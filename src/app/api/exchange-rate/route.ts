@@ -18,7 +18,7 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: Request) {
-  if (!process.env.GEMINI_API_KEY) {
+  if (!process.env.GEMINI_API_KEY || process.env.PAID_AI_ENABLED === 'false') {
     try { return await freeRates(); } catch {
       return NextResponse.json({ error: '환율 정보를 불러올 수 없습니다.' }, { status: 503 });
     }
