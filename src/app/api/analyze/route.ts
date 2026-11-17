@@ -17,6 +17,9 @@ export async function OPTIONS(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    if (process.env.PAID_AI_ENABLED === 'false') {
+      return NextResponse.json({ error: '현재 영수증 AI 분석을 사용할 수 없습니다.' }, { status: 503 });
+    }
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json({ error: 'Gemini API 키가 설정되지 않았습니다.' }, { status: 500 });
     }

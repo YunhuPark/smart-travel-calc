@@ -33,3 +33,15 @@ npm run build
 ```
 
 The Python tests execute the production Lua in an embedded Lua engine with shared Redis semantics, including concurrent independent clients; they do not certify a particular hosted Redis service. Before enabling paid AI, test EVAL compatibility against your own isolated Redis database with synthetic requests. Never use live paid requests for regression testing.
+
+
+## Operator emergency switch
+
+Set the server-only `PAID_AI_ENABLED=false` in production and preview to stop paid
+provider calls while shared Redis/operator configuration is incomplete. Gift
+recommendations and travel currency rates keep their free fallback paths. Receipt
+AI analysis returns 503 while disabled. Existing provider credentials are retained
+and are never exposed to the browser. Redeploy after changing the environment.
+
+Re-enable only after the shared Redis URL/token, common budget namespace and
+operator token are configured and verified. Do not enable an unbudgeted deployment.
