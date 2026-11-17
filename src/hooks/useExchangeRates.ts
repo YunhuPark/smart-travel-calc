@@ -1,4 +1,5 @@
 "use client";
+import { aiHeaders } from '../lib/ai-session';
 
 import { useState, useEffect } from "react";
 
@@ -47,7 +48,7 @@ export function useExchangeRates() {
 
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-        const response = await fetch(`${apiUrl}/api/exchange-rate`, { method: 'POST' });
+        const response = await fetch(`${apiUrl}/api/exchange-rate`, { method: 'POST', headers: aiHeaders() });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
@@ -72,6 +73,8 @@ export function useExchangeRates() {
     }
 
     fetchRates();
+    window.addEventListener('ai-access-changed', fetchRates);
+    return () => window.removeEventListener('ai-access-changed', fetchRates);
   }, []);
 
   // rates 형식: { JPY: 9.81, USD: 1370, ... } — 1단위 외화 = KRW

@@ -1,3 +1,4 @@
+import { acquirePaidAi, readPaidJson, PaidAiError } from '../../../lib/paid-ai';
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -7,8 +8,8 @@ export async function OPTIONS(req: Request) {
   return new NextResponse(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });
@@ -20,9 +21,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Gemini API 키가 설정되지 않았습니다.' }, { status: 500 });
     }
 
-    const body = await req.json();
+    const body = await readPaidJson(req, 2800000);
     const { text, image } = body;
 
+    if ((text !== undefined && (typeof text !== 'string' || text.length > 8000)) ||
+        (image !== undefined && (typeof image !== 'string' || image.length > 2700000 ||
+          !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(image)))) {
+      return NextResponse.json({ error: 'Invalid or oversized receipt' }, { status: 400 });
+    }
     if (!text && !image) {
       return NextResponse.json({ error: '분석할 텍스트나 영수증 이미지를 제공해주세요.' }, { status: 400 });
     }
@@ -58,7 +64,7 @@ export async function POST(req: Request) {
     const generate = async (modelName: string) => {
         const model = genAI.getGenerativeModel({
           model: modelName,
-          generationConfig: { temperature: 0 },
+          generationConfig: { temperature: 0, maxOutputTokens: 4096 },
         });
         if (image) {
             const imageParts = [
@@ -70,15 +76,17 @@ export async function POST(req: Request) {
               },
               prompt
             ];
-            return await model.generateContent(imageParts);
+            return await model.generateContent(imageParts, { timeout: 20000 });
         } else {
-            return await model.generateContent(prompt);
+            return await model.generateContent(prompt, { timeout: 20000 });
         }
     };
 
-    const FALLBACK_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+    const FALLBACK_MODELS = ['gemini-2.5-flash'];
     let result;
     let lastError: any;
+    const release = await acquirePaidAi(req, FALLBACK_MODELS.length);
+    try {
     for (const modelName of FALLBACK_MODELS) {
         try {
             console.log(`${modelName} 모델로 분석 시도 중...`);
@@ -94,31 +102,33 @@ export async function POST(req: Request) {
             }
         }
     }
+    } finally { await release(); }
     if (!result) throw lastError;
 
     const responseText = result.response.text();
-    console.log("AI Response:", responseText); // 디버깅용 로그
+
 
     // 정규식을 사용해 ```json ... ``` 블록 안의 내용만 안전하게 추출
     const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
     const cleanedText = jsonMatch ? jsonMatch[1].trim() : responseText.trim();
-    
+
     let parsedData = [];
     try {
       parsedData = JSON.parse(cleanedText);
     } catch(e) {
-      console.error("JSON 파싱 에러. 원본 텍스트:", cleanedText);
+
       throw new Error("AI 응답을 처리할 수 없습니다.");
     }
 
     return NextResponse.json({ data: parsedData }, {
       headers: {
-        'Access-Control-Allow-Origin': '*',
+
       }
     });
   } catch (error: any) {
+    if (error instanceof PaidAiError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error('Error analyzing:', error);
-    
+
     // 유저 친화적인 에러 메시지로 변환
     let errorMsg = '분석 중 오류가 발생했습니다.';
     if (error.message && error.message.includes('503')) {
@@ -126,11 +136,11 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(
-      { error: errorMsg, details: error.message },
-      { 
+      { error: errorMsg },
+      {
         status: 500,
         headers: {
-          'Access-Control-Allow-Origin': '*',
+
         }
       }
     );
